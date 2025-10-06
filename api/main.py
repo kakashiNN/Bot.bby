@@ -20,30 +20,45 @@ def chat_api(msg: Message):
 
     # --- Teach command ---
     if text.lower().startswith("/bby teach"):
-        try:
-            _, rest = text.split(" ", 2)[1:]
-            trigger, reply = rest.split(" - ", 1)
-            trigger = trigger.strip().lower()
-            reply = reply.strip()
+        parts = text.split(" ", 2)
+        if len(parts) < 3:
+            return {"reply": "❌ Teach format vhul: /bby teach trigger - reply"}
 
-            # Save to MongoDB
-            collection.update_one(
-                {"trigger": trigger},
-                {"$set": {"reply": reply}},
-                upsert=True
-            )
+        rest = parts[2]
+        if " - " not in rest:
+            return {"reply": "❌ Teach format vhul: /bby teach trigger - reply"}
 
-            return {"reply": f"𝚜𝚑𝚒𝚔𝚝𝚎 𝚙𝚊𝚛𝚕𝚊𝚖 ! '{trigger}' 𝚎𝚛 𝚓𝚘𝚗𝚗𝚘 𝚊𝚖𝚒 𝚛𝚎𝚙𝚕𝚢 𝚍𝚒𝚋𝚘 '{reply}'."}
-        except:
-            return {"reply": "𝚃𝚎𝚊𝚌𝚑 𝚏𝚘𝚛𝚖𝚊𝚝 𝚟𝚑𝚞𝚕: /bby teach trigger - reply"}
+        trigger, reply = rest.split(" - ", 1)
+        trigger = trigger.strip().lower()
+        reply = reply.strip()
+
+        # Save to MongoDB
+        collection.update_one(
+            {"trigger": trigger},
+            {"$set": {"reply": reply}},
+            upsert=True
+        )
+
+        return {"reply": f"✅ Shikte parlam! '{trigger}' er jonno ami reply dibo '{reply}'."}
 
     # --- User message reply from MongoDB ---
     if msg.sender.lower() == "user":
-        record = collection.find_one({"trigger": text.lower()})
+        trigger_key = text.lower().strip()
+        record = collection.find_one({"trigger": trigger_key})
+
         if record:
             return {"reply": record["reply"]}
-        elif "kemon acho" in text.lower():
-            return {"reply": "𝚊𝚕𝚕𝚑𝚞𝚖𝚍𝚞𝚕𝚒𝚕𝚕𝚊𝚑, 𝚝𝚖𝚛 𝚔𝚒 𝚔𝚑𝚘𝚋𝚘𝚛?"}
+        elif any(kw in trigger_key for kw in ["kemon acho", "kemon aso"]):
+            return {"reply": "𝚊𝚕𝚕𝚑𝚞𝚖𝚍𝚞𝚕𝚒𝚕𝚕𝚊𝚑, tmr ki khobor?"}
+        elif trigger_key.startswith("baby") or trigger_key.startswith("bby") or trigger_key.startswith("babu") or trigger_key.startswith("jan") or trigger_key.startswith("bot"):
+            # Baby cmds default replies
+            baby_replies = [
+                "Ooo bby bolecho 🌚",
+                "Yes 😀, I am NIROB bot here 🖤",
+                "Bolo jaan ki korte pari tmr jonno"
+            ]
+            import random
+            return {"reply": random.choice(baby_replies)}
         else:
             return {"reply": "𝐚𝐦𝐚𝐤𝐞 𝐞𝐭𝐚 𝐭𝐞𝐚𝐜𝐡 𝐤𝐨𝐫𝐚 𝐡𝐨𝐲 𝐧𝐚𝐢 🥲 𝐩𝐥𝐢𝐥𝐢𝐳 𝐚𝐦𝐚𝐤𝐞 𝐞𝐭𝐚 𝐭𝐞𝐚𝐜𝐡 𝐤𝐨𝐫𝐨"}
 
