@@ -45,7 +45,7 @@ def chat_api(msg: Message):
         elif "kemon acho" in text.lower():
             return {"reply": "𝚊𝚕𝚕𝚑𝚞𝚖𝚍𝚞𝚕𝚒𝚕𝚕𝚊𝚑, 𝚝𝚖𝚛 𝚔𝚒 𝚔𝚑𝚘𝚋𝚘𝚛?"}
         else:
-            return {"reply": "𝚊𝚌𝚑𝚒 𝚟𝚊𝚕𝚊."}
+            return {"reply": ""}
 
     # --- Owner special response ---
     if msg.sender.lower() == "tumar owner ke":
