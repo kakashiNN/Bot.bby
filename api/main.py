@@ -11,25 +11,21 @@ db = client["chatbot_db"]
 collection = db["memory"]
 
 class Message(BaseModel):
-    sender: str
+    sender: str  # "user" বা "bot"
     message: str
 
 @app.post("/chat/")
 def chat_api(msg: Message):
-    text = msg.message.strip()
+    text = msg.message.strip().lower()
 
     # --- Teach command ---
-    if text.lower().startswith("/bby teach"):
+    if text.startswith("/bby teach"):
         parts = text.split(" ", 2)
-        if len(parts) < 3:
-            return {"reply": "❌ Teach format vhul: /bby teach trigger - reply"}
+        if len(parts) < 3 or " - " not in parts[2]:
+            return {"reply": "❌ 𝗧𝗲𝗮𝗰𝗵 𝗳𝗼𝗿𝗺𝗮𝘁 𝘃𝗵𝘂𝗹: /bby teach trigger - reply"}
 
-        rest = parts[2]
-        if " - " not in rest:
-            return {"reply": "❌ Teach format vhul: /bby teach trigger - reply"}
-
-        trigger, reply = rest.split(" - ", 1)
-        trigger = trigger.strip().lower()
+        trigger, reply = parts[2].split(" - ", 1)
+        trigger = trigger.strip()
         reply = reply.strip()
 
         # Save to MongoDB
@@ -39,31 +35,16 @@ def chat_api(msg: Message):
             upsert=True
         )
 
-        return {"reply": f"✅ Shikte parlam! '{trigger}' er jonno ami reply dibo '{reply}'."}
+        return {"reply": f"✅ 𝘀𝗵𝗶𝗸𝗵𝘁𝗲 𝗽𝗮𝗿𝗹𝗮𝗺 ! '{trigger}' 𝗲𝗿 𝗷𝗼𝗻𝗻𝗼 𝗿𝗲𝗽𝗹𝘆 𝗱𝗶𝗯𝗼'{reply}'."}
 
-    # --- User message reply from MongoDB ---
-    if msg.sender.lower() == "user":
-        trigger_key = text.lower().strip()
-        record = collection.find_one({"trigger": trigger_key})
+    # --- Owner query ---
+    if "tumar owner ke" in text or "tumar boss ke" in text:
+        return {"reply": "𝐚𝐦𝐚𝐫 𝐨𝐰𝐧𝐞𝐫 𝐧𝐢𝐫𝐨𝐛 😍"}
 
-        if record:
-            return {"reply": record["reply"]}
-        elif any(kw in trigger_key for kw in ["kemon acho", "kemon aso"]):
-            return {"reply": "𝚊𝚕𝚕𝚑𝚞𝚖𝚍𝚞𝚕𝚒𝚕𝚕𝚊𝚑, tmr ki khobor?"}
-        elif trigger_key.startswith("baby") or trigger_key.startswith("bby") or trigger_key.startswith("babu") or trigger_key.startswith("jan") or trigger_key.startswith("bot"):
-            # Baby cmds default replies
-            baby_replies = [
-                "Ooo bby bolecho 🌚",
-                "Yes 😀, I am NIROB bot here 🖤",
-                "Bolo jaan ki korte pari tmr jonno"
-            ]
-            import random
-            return {"reply": random.choice(baby_replies)}
-        else:
-            return {"reply": "𝐚𝐦𝐚𝐤𝐞 𝐞𝐭𝐚 𝐭𝐞𝐚𝐜𝐡 𝐤𝐨𝐫𝐚 𝐡𝐨𝐲 𝐧𝐚𝐢 🥲 𝐩𝐥𝐢𝐥𝐢𝐳 𝐚𝐦𝐚𝐤𝐞 𝐞𝐭𝐚 𝐭𝐞𝐚𝐜𝐡 𝐤𝐨𝐫𝐨"}
+    # --- Check memory for trigger ---
+    record = collection.find_one({"trigger": text})
+    if record:
+        return {"reply": record["reply"]}
 
-    # --- Owner special response ---
-    if msg.sender.lower() == "tumar owner ke":
-        return {"reply": "𝙽𝚒𝚛𝚘𝚋 𝚊𝚖𝚊𝚛 𝚘𝚠𝚗𝚎𝚛 🥰"}
-
-    return {"reply": "Invalid sender"}
+    # --- Trigger not taught yet ---
+    return {"reply": "❌ 𝗲𝘁𝗮 𝗮𝗺𝗮𝗸𝗲 𝘁𝗲𝗮𝗰𝗵 𝗸𝗼𝗿𝗮 𝗵𝗼𝘆 𝗻𝗮𝗶 ... 𝗽𝗹𝗲𝗮𝘀𝗲 𝗲𝘁𝗮 𝗮𝗺𝗮𝗸𝗲 𝘁𝗲𝗮𝗰𝗵 𝗸𝗼𝗿𝗼"}
