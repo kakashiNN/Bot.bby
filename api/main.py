@@ -11,40 +11,44 @@ db = client["chatbot_db"]
 collection = db["memory"]
 
 class Message(BaseModel):
-    sender: str  # "user" বা "bot"
+    sender: str
     message: str
 
 @app.post("/chat/")
 def chat_api(msg: Message):
-    text = msg.message.strip().lower()
+    text = msg.message.strip()
 
     # --- Teach command ---
-    if text.startswith("/bby teach"):
-        parts = text.split(" ", 2)
-        if len(parts) < 3 or " - " not in parts[2]:
-            return {"reply": "❌ 𝗧𝗲𝗮𝗰𝗵 𝗳𝗼𝗿𝗺𝗮𝘁 𝘃𝗵𝘂𝗹: /bby teach trigger - reply"}
+    if text.lower().startswith("/bby teach"):
+        try:
+            _, rest = text.split(" ", 2)[1:]
+            trigger, reply = rest.split(" - ", 1)
+            trigger = trigger.strip().lower()
+            reply = reply.strip()
 
-        trigger, reply = parts[2].split(" - ", 1)
-        trigger = trigger.strip()
-        reply = reply.strip()
+            # Save to MongoDB
+            collection.update_one(
+                {"trigger": trigger},
+                {"$set": {"reply": reply}},
+                upsert=True
+            )
 
-        # Save to MongoDB
-        collection.update_one(
-            {"trigger": trigger},
-            {"$set": {"reply": reply}},
-            upsert=True
-        )
+            return {"reply": f"𝚜𝚑𝚒𝚔𝚝𝚎 𝚙𝚊𝚛𝚕𝚊𝚖 ! '{trigger}' 𝚎𝚛 𝚓𝚘𝚗𝚗𝚘 𝚊𝚖𝚒 𝚛𝚎𝚙𝚕𝚢 𝚍𝚒𝚋𝚘 '{reply}'."}
+        except:
+            return {"reply": "𝚃𝚎𝚊𝚌𝚑 𝚏𝚘𝚛𝚖𝚊𝚝 𝚟𝚑𝚞𝚕: /bby teach trigger - reply"}
 
-        return {"reply": f"✅ 𝘀𝗵𝗶𝗸𝗵𝘁𝗲 𝗽𝗮𝗿𝗹𝗮𝗺 ! '{trigger}' 𝗲𝗿 𝗷𝗼𝗻𝗻𝗼 𝗿𝗲𝗽𝗹𝘆 𝗱𝗶𝗯𝗼'{reply}'."}
+    # --- User message reply from MongoDB ---
+    if msg.sender.lower() == "user":
+        record = collection.find_one({"trigger": text.lower()})
+        if record:
+            return {"reply": record["reply"]}
+        elif "kemon acho" in text.lower():
+            return {"reply": "𝚊𝚕𝚕𝚑𝚞𝚖𝚍𝚞𝚕𝚒𝚕𝚕𝚊𝚑, 𝚝𝚖𝚛 𝚔𝚒 𝚔𝚑𝚘𝚋𝚘𝚛?"}
+        else:
+            return {"reply": "𝐞𝐭𝐚 𝐚𝐦𝐚𝐤𝐞 𝐭𝐞𝐚𝐜𝐡 𝐤𝐨𝐫𝐚 𝐡𝐨𝐲 𝐧𝐚𝐢."}
 
-    # --- Owner query ---
-    if "tumar owner ke" in text or "tumar boss ke" in text:
-        return {"reply": "𝐚𝐦𝐚𝐫 𝐨𝐰𝐧𝐞𝐫 𝐧𝐢𝐫𝐨𝐛 😍"}
+    # --- Owner special response ---
+    if msg.sender.lower() == "tumar owner ke":
+        return {"reply": "𝙽𝚒𝚛𝚘𝚋 𝚊𝚖𝚊𝚛 𝚘𝚠𝚗𝚎𝚛 🥰"}
 
-    # --- Check memory for trigger ---
-    record = collection.find_one({"trigger": text})
-    if record:
-        return {"reply": record["reply"]}
-
-    # --- Trigger not taught yet ---
-    return {"reply": "❌ 𝗲𝘁𝗮 𝗮𝗺𝗮𝗸𝗲 𝘁𝗲𝗮𝗰𝗵 𝗸𝗼𝗿𝗮 𝗵𝗼𝘆 𝗻𝗮𝗶 ... 𝗽𝗹𝗲𝗮𝘀𝗲 𝗲𝘁𝗮 𝗮𝗺𝗮𝗸𝗲 𝘁𝗲𝗮𝗰𝗵 𝗸𝗼𝗿𝗼"}
+    return {"reply": "Invalid sender"}
